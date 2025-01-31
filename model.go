@@ -39,7 +39,6 @@ type Container struct {
 }
 
 func NewModel(containers []Container, speaker io.Writer, style lipgloss.Style) Model {
-	choices := make([]Container, len(containers))
 	lists := make([]list.Model, len(containers))
 	for i, container := range containers {
 		// TODO foreach container, ccreate a list of questions.
@@ -59,7 +58,7 @@ func NewModel(containers []Container, speaker io.Writer, style lipgloss.Style) M
 
 	return Model{
 		lists:    lists,
-		choices:  choices,
+		choices:  containers,
 		speaker:  speaker,
 		style:    style,
 		cursorAt: 0,
@@ -74,7 +73,6 @@ func (m Model) Init() tea.Cmd {
 // Update the model only.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-	m.lists[m.focused], cmd = m.lists[m.focused].Update(msg)
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -83,16 +81,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "s", "enter":
-			m.speaker.Write([]byte("Chosen"))
-			m.speaker.Write([]byte{4})
-		case "j":
-			m.cursorAt++
-		case "k":
-			m.cursorAt--
+			m.speaker.Write([]byte(m.choices[0].Questions[m.cursorAt]))
+			m.speaker.Write([]byte("\n"))
+		case "j", "up":
+			if m.cursorAt < len(m.choices[0].Questions)-1 {
+				m.cursorAt++
+			}
+		case "k", "down":
+			if m.cursorAt > 0 {
+				m.cursorAt--
+			}
 		case "q", "x":
 			return m, tea.Quit
 		}
 	}
+	m.lists[m.focused], cmd = m.lists[m.focused].Update(msg)
 
 	return m, cmd
 }
