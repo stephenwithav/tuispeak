@@ -23,8 +23,23 @@ func main() {
 		Height(7).
 		Width(20)
 
+	// Create 2/3 Models.  What contains them?
+	// The model.  Ugh.
+	// Perhaps a BaseModel with a container holding them?
+	// Use lipgloss.JoinHorizontal(lipgloss.Left, containers.View())
+	// Create a divisor container.  Each is 1/3 width.
+	// Initialize list on tea.WindowSizeMsg type?  Nah, before.
 	model := tuispeak.NewModel(
-		[]string{"Hello", "You", `There`},
+		[]tuispeak.Container{
+			{
+				Questions: []string{"Hello", "You", `There`},
+				Title:     `To Dos`,
+			},
+			{
+				Questions: []string{"Hello", "You", `There`},
+				Title:     `In Progress`,
+			},
+		},
 		speakerW,
 		style,
 	)

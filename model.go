@@ -25,29 +25,40 @@ func (q Question) Description() string {
 }
 
 type Model struct {
-	list     list.Model
-	choices  []Question
+	lists    []list.Model
+	choices  []Container
 	cursorAt int
 	speaker  io.Writer
 	style    lipgloss.Style
+	focused  int
 }
 
-func NewModel(questions []string, speaker io.Writer, style lipgloss.Style) Model {
-	choices := make([]Question, len(questions))
-	for i, val := range questions {
-		choices[i] = Question{
-			q: val,
+type Container struct {
+	Title     string
+	Questions []string
+}
+
+func NewModel(containers []Container, speaker io.Writer, style lipgloss.Style) Model {
+	choices := make([]Container, len(containers))
+	lists := make([]list.Model, len(containers))
+	for i, container := range containers {
+		// TODO foreach container, ccreate a list of questions.
+		lists[i] = list.New([]list.Item{}, list.NewDefaultDelegate(), 30, 20)
+		lists[i].SetShowHelp(false)
+		lists[i].Title = container.Title
+
+		// TODO create slice of list.Item, set them.
+		listOfQuestions := make([]list.Item, len(container.Questions))
+		for j, question := range container.Questions {
+			listOfQuestions[j] = Question{
+				q: question,
+			}
 		}
+		lists[i].SetItems(listOfQuestions)
 	}
-	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 30, 20)
-	l.Title = "Questions"
-	l.SetItems([]list.Item{
-		choices[0],
-		choices[1],
-	})
 
 	return Model{
-		list:     l,
+		lists:    lists,
 		choices:  choices,
 		speaker:  speaker,
 		style:    style,
@@ -63,7 +74,7 @@ func (m Model) Init() tea.Cmd {
 // Update the model only.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-	m.list, cmd = m.list.Update(msg)
+	m.lists[m.focused], cmd = m.lists[m.focused].Update(msg)
 
 	switch msg := msg.(type) {
 	// case tea.WindowSizeMsg:
@@ -88,5 +99,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // Render the model.
 func (m Model) View() string {
-	return m.style.Render(m.list.View())
+	views := make([]string, len(m.choices))
+	for i, list := range m.lists {
+		views[i] = list.View()
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Left, views...)
 }
