@@ -77,9 +77,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.lists[m.focused], cmd = m.lists[m.focused].Update(msg)
 
 	switch msg := msg.(type) {
-	// case tea.WindowSizeMsg:
-	// 	h, v := m.style.GetFrameSize()
-	// 	m.list.SetSize(msg.Width-h, msg.Height-v)
+	case tea.WindowSizeMsg:
+		h, v := m.style.GetFrameSize()
+		m.lists[m.focused].SetSize(msg.Width-h, msg.Height-v)
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "s", "enter":
