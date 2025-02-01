@@ -23,10 +23,17 @@ boards:
       - Please refill my water.
       - May I please have a breathing treatment?
       - Thank you.
+
+  - title: Personable Qs
+    questions:
+      - It's good to see you.  How are you doing?
+      - What's new?
 ```
 
 # Usage
 Use `j`/`k` or `Up`/`Down` to select your pre-defined choices, then `s` or `Enter` to have it read back to you.
+
+Use `h`/`l` or `Left`/`Right` to move between boards, assuming you have more than one.
 
 ## Screenshot
 <img src="screenshot.png" width="720" height="480" alt="Screenshot">
