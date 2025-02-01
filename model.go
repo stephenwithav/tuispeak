@@ -29,7 +29,8 @@ type Model struct {
 	choices                 []Container
 	currentPositionsInLists []int
 	speaker                 io.Writer
-	style                   lipgloss.Style
+	focusedStyle            lipgloss.Style
+	unfocusedStyle          lipgloss.Style
 	currentlyFocusedList    int
 }
 
@@ -38,12 +39,12 @@ type Container struct {
 	Questions []string
 }
 
-func NewModel(containers []Container, speaker io.Writer, style lipgloss.Style) Model {
+func NewModel(containers []Container, speaker io.Writer, focusedStyle lipgloss.Style, unfocusedStyle lipgloss.Style) Model {
 	lists := make([]list.Model, len(containers))
 	defaultListPositions := make([]int, len(containers))
 	for i, container := range containers {
 		// TODO foreach container, ccreate a list of questions.
-		lists[i] = list.New([]list.Item{}, list.NewDefaultDelegate(), 30, 20)
+		lists[i] = list.New([]list.Item{}, list.NewDefaultDelegate(), 50, 20)
 		lists[i].SetShowHelp(false)
 		lists[i].Title = container.Title
 
@@ -62,7 +63,8 @@ func NewModel(containers []Container, speaker io.Writer, style lipgloss.Style) M
 		lists:                   lists,
 		choices:                 containers,
 		speaker:                 speaker,
-		style:                   style,
+		focusedStyle:            focusedStyle,
+		unfocusedStyle:          unfocusedStyle,
 		currentPositionsInLists: defaultListPositions,
 		currentlyFocusedList:    0,
 	}
@@ -79,7 +81,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		h, v := m.style.GetFrameSize()
+		h, v := m.focusedStyle.GetFrameSize()
 		m.lists[m.currentlyFocusedList].SetSize(msg.Width-h, msg.Height-v)
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -115,7 +117,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 	views := make([]string, len(m.choices))
 	for i, list := range m.lists {
-		views[i] = list.View()
+		if i == m.currentlyFocusedList {
+			views[i] = m.focusedStyle.Render(list.View())
+			continue
+		}
+
+		views[i] = m.unfocusedStyle.Render(list.View())
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Left, views...)
 }
