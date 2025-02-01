@@ -25,12 +25,12 @@ func (q Question) Description() string {
 }
 
 type Model struct {
-	lists    []list.Model
-	choices  []Container
-	cursorAt int
-	speaker  io.Writer
-	style    lipgloss.Style
-	focused  int
+	lists                   []list.Model
+	choices                 []Container
+	currentPositionsInLists []int
+	speaker                 io.Writer
+	style                   lipgloss.Style
+	currentlyFocusedList    int
 }
 
 type Container struct {
@@ -40,6 +40,7 @@ type Container struct {
 
 func NewModel(containers []Container, speaker io.Writer, style lipgloss.Style) Model {
 	lists := make([]list.Model, len(containers))
+	defaultListPositions := make([]int, len(containers))
 	for i, container := range containers {
 		// TODO foreach container, ccreate a list of questions.
 		lists[i] = list.New([]list.Item{}, list.NewDefaultDelegate(), 30, 20)
@@ -54,14 +55,16 @@ func NewModel(containers []Container, speaker io.Writer, style lipgloss.Style) M
 			}
 		}
 		lists[i].SetItems(listOfQuestions)
+		defaultListPositions[0] = 0
 	}
 
 	return Model{
-		lists:    lists,
-		choices:  containers,
-		speaker:  speaker,
-		style:    style,
-		cursorAt: 0,
+		lists:                   lists,
+		choices:                 containers,
+		speaker:                 speaker,
+		style:                   style,
+		currentPositionsInLists: defaultListPositions,
+		currentlyFocusedList:    0,
 	}
 }
 
@@ -77,25 +80,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		h, v := m.style.GetFrameSize()
-		m.lists[m.focused].SetSize(msg.Width-h, msg.Height-v)
+		m.lists[m.currentlyFocusedList].SetSize(msg.Width-h, msg.Height-v)
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "s", "enter":
-			m.speaker.Write([]byte(m.choices[0].Questions[m.cursorAt]))
+			m.speaker.Write([]byte(m.choices[m.currentlyFocusedList].Questions[m.currentPositionsInLists[m.currentlyFocusedList]]))
 			m.speaker.Write([]byte("\n"))
 		case "j", "up":
-			if m.cursorAt < len(m.choices[0].Questions)-1 {
-				m.cursorAt++
+			if m.currentPositionsInLists[m.currentlyFocusedList] < len(m.choices[0].Questions)-1 {
+				m.currentPositionsInLists[m.currentlyFocusedList]++
 			}
 		case "k", "down":
-			if m.cursorAt > 0 {
-				m.cursorAt--
+			if m.currentPositionsInLists[m.currentlyFocusedList] > 0 {
+				m.currentPositionsInLists[m.currentlyFocusedList]--
+			}
+		case "h", "left":
+			if m.currentlyFocusedList > 0 {
+				m.currentlyFocusedList--
+			}
+		case "l", "right":
+			if m.currentlyFocusedList < len(m.lists)-1 {
+				m.currentlyFocusedList++
 			}
 		case "q", "x":
 			return m, tea.Quit
 		}
 	}
-	m.lists[m.focused], cmd = m.lists[m.focused].Update(msg)
+	m.lists[m.currentlyFocusedList], cmd = m.lists[m.currentlyFocusedList].Update(msg)
 
 	return m, cmd
 }
