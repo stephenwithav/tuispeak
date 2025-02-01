@@ -57,11 +57,21 @@ func main() {
 	if err := speaker.Start(); err != nil {
 		log.Fatal(`Could not start spd-say.`)
 	}
-	style := lipgloss.NewStyle().
+	unfocusedStyle := lipgloss.NewStyle().
 		Bold(true).
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color(`8`)).
 		Foreground(lipgloss.Color(`#FFFFFF`)).
-		Height(7).
-		Width(30)
+		// Height(7).
+		Width(50)
+
+	focusedStyle := lipgloss.NewStyle().
+		Bold(true).
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color(`62`)).
+		Foreground(lipgloss.Color(`#FFFFFF`)).
+		// Height(7).
+		Width(50)
 
 	boards := readBoardsConfig()
 	if boards == nil {
@@ -76,7 +86,8 @@ func main() {
 	model := tuispeak.NewModel(
 		containers,
 		speakerW,
-		style,
+		focusedStyle,
+		unfocusedStyle,
 	)
 	if _, err := tea.NewProgram(model).Run(); err != nil {
 		log.Fatalf(`Error running program: %s`, err.Error())
