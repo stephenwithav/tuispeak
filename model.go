@@ -5,7 +5,13 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+)
+
+const (
+	showBoards = iota
+	showInput
 )
 
 type Question struct {
@@ -25,13 +31,16 @@ func (q Question) Description() string {
 }
 
 type Model struct {
-	lists                   []list.Model
-	choices                 []Container
-	currentPositionsInLists []int
-	speaker                 io.Writer
-	focusedStyle            lipgloss.Style
-	unfocusedStyle          lipgloss.Style
-	currentlyFocusedList    int
+	lists                     []list.Model
+	choices                   []Container
+	currentPositionsInLists   []int
+	currentFocusedItemInLists []int
+	speaker                   io.Writer
+	focusedStyle              lipgloss.Style
+	unfocusedStyle            lipgloss.Style
+	currentlyFocusedList      int
+	form                      *huh.Form
+	currentlyFocusedBoard     int
 }
 
 type Container struct {
@@ -60,19 +69,27 @@ func NewModel(containers []Container, speaker io.Writer, focusedStyle lipgloss.S
 	}
 
 	return Model{
-		lists:                   lists,
-		choices:                 containers,
-		speaker:                 speaker,
-		focusedStyle:            focusedStyle,
-		unfocusedStyle:          unfocusedStyle,
-		currentPositionsInLists: defaultListPositions,
-		currentlyFocusedList:    0,
+		lists:                     lists,
+		choices:                   containers,
+		speaker:                   speaker,
+		focusedStyle:              focusedStyle,
+		unfocusedStyle:            unfocusedStyle,
+		currentPositionsInLists:   defaultListPositions,
+		currentFocusedItemInLists: defaultListPositions,
+		currentlyFocusedList:      0,
+		form: huh.NewForm(
+			huh.NewGroup(
+				huh.NewInput().
+					Title(`Say what?`).
+					Key(`saythis`).
+					Prompt(`> `)),
+		),
 	}
 }
 
 // Implement the init method.
 func (m Model) Init() tea.Cmd {
-	return nil
+	return m.form.Init()
 }
 
 // Update the model only.
@@ -85,9 +102,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.lists[m.currentlyFocusedList].SetSize(msg.Width-h, msg.Height-v)
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "tab", "ctrl+i":
+			switch m.currentlyFocusedBoard {
+			case showBoards:
+				m.currentlyFocusedBoard = showInput
+			case showInput:
+				m.currentlyFocusedBoard = showBoards
+			}
 		case "s", "enter":
-			m.speaker.Write([]byte(m.choices[m.currentlyFocusedList].Questions[m.currentPositionsInLists[m.currentlyFocusedList]]))
-			m.speaker.Write([]byte("\n"))
+			switch m.currentlyFocusedBoard {
+			case showBoards:
+				m.speaker.Write([]byte(m.choices[m.currentlyFocusedList].Questions[m.currentPositionsInLists[m.currentlyFocusedList]]))
+				m.speaker.Write([]byte("\n"))
+			case showInput:
+				s := m.form.GetString(`saythis`)
+				m.speaker.Write([]byte(s))
+				m.speaker.Write([]byte("\n"))
+				m.currentlyFocusedBoard = showInput
+			}
 		case "j", "up":
 			if m.currentPositionsInLists[m.currentlyFocusedList] < len(m.choices[0].Questions)-1 {
 				m.currentPositionsInLists[m.currentlyFocusedList]++
@@ -98,31 +130,45 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "h", "left":
 			if m.currentlyFocusedList > 0 {
+				m.currentFocusedItemInLists[m.currentlyFocusedList] = m.lists[m.currentlyFocusedList].Index()
 				m.currentlyFocusedList--
+				m.lists[m.currentlyFocusedList].Select(m.currentFocusedItemInLists[m.currentlyFocusedList])
 			}
 		case "l", "right":
 			if m.currentlyFocusedList < len(m.lists)-1 {
+				m.currentFocusedItemInLists[m.currentlyFocusedList] = m.lists[m.currentlyFocusedList].Index()
 				m.currentlyFocusedList++
+				m.lists[m.currentlyFocusedList].Select(m.currentFocusedItemInLists[m.currentlyFocusedList])
 			}
 		case "q", "x":
 			return m, tea.Quit
 		}
 	}
 	m.lists[m.currentlyFocusedList], cmd = m.lists[m.currentlyFocusedList].Update(msg)
+	if m.currentlyFocusedBoard == showInput {
+		return m.form.Update(msg)
+	}
 
 	return m, cmd
 }
 
 // Render the model.
 func (m Model) View() string {
-	views := make([]string, len(m.choices))
-	for i, list := range m.lists {
-		if i == m.currentlyFocusedList {
-			views[i] = m.focusedStyle.Render(list.View())
-			continue
-		}
+	switch m.currentlyFocusedBoard {
+	case showBoards:
+		views := make([]string, len(m.choices))
+		for i, list := range m.lists {
+			if i == m.currentlyFocusedList {
+				views[i] = m.focusedStyle.Render(list.View())
+				continue
+			}
 
-		views[i] = m.unfocusedStyle.Render(list.View())
+			views[i] = m.unfocusedStyle.Render(list.View())
+		}
+		return lipgloss.JoinHorizontal(lipgloss.Left, views...)
+	case showInput:
+		return m.form.View()
 	}
-	return lipgloss.JoinHorizontal(lipgloss.Left, views...)
+
+	return ""
 }
