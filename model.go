@@ -106,6 +106,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "q", "x":
 			return m, tea.Quit
+		case "n":
+			return NewQueryModel(`test`, m.speaker, m), nil
 		}
 	}
 	m.lists[m.currentlyFocusedList], cmd = m.lists[m.currentlyFocusedList].Update(msg)
