@@ -106,7 +106,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "q", "x":
 			return m, tea.Quit
-		case "n":
+		case "n", "tab":
 			return NewQueryModel(`test`, m.speaker, m), nil
 		}
 	}

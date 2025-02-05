@@ -35,6 +35,8 @@ Use `j`/`k` or `Up`/`Down` to select your pre-defined choices, then `s` or `Ente
 
 Use `h`/`l` or `Left`/`Right` to move between boards, assuming you have more than one.
 
+Use `n`/`Tab` to enter a custom phrase to synthesize.
+
 ## Screenshot
 <img src="screenshot.png" width="720" height="480" alt="Screenshot">
 
